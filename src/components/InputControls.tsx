@@ -261,6 +261,35 @@ export const InputControls: React.FC<InputControlsProps> = ({
             </div>
           </div>
         </div>
+
+        {/* 6. Inflation Rate (π) - adjusts future nominal values to real-term purchasing power */}
+        <div className="rounded-lg border border-slate-800/80 bg-slate-950/40 p-3">
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-1.5">
+              <label className="font-medium text-slate-300">Inflation Rate (π)</label>
+              <span className="text-[10px] text-slate-500">Real-term purchasing power</span>
+            </div>
+            <span className="font-mono font-semibold text-amber-400 tabular-nums">
+              {(inputs.inflationRate ?? 5.0).toFixed(1)}% p.a.
+            </span>
+          </div>
+          <input
+            type="range"
+            min={0.0}
+            max={10.0}
+            step={0.5}
+            value={inputs.inflationRate ?? 5.0}
+            onChange={(e) => updateField('inflationRate', parseFloat(e.target.value))}
+            className="mt-2 h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-slate-800 accent-amber-500"
+          />
+          <div className="mt-1 flex justify-between text-[11px] text-slate-500 font-mono">
+            <span>0% (Nominal)</span>
+            <span>3% (Low)</span>
+            <span>5.0% (CPI Avg)</span>
+            <span>7%</span>
+            <span>10%</span>
+          </div>
+        </div>
       </div>
 
       {/* Advanced / Real-World Model Toggle */}

@@ -81,6 +81,24 @@ export function calculateBaseModel(inputs: BaseInputs): BaseCalculationResult {
   const equityMultipleProperty = totalCapitalInvested > 0 ? propertyFV / totalCapitalInvested : 0;
   const equityMultipleAlternative = totalCapitalInvested > 0 ? alternativeFV / totalCapitalInvested : 0;
 
+  // Inflation adjustments and Real-term ROI calculations
+  const inflationRate = inputs.inflationRate ?? 5.0;
+  const inflationDec = inflationRate / 100;
+  const cumulativeInflationFactor = Math.pow(1 + inflationDec, T);
+  const realPropertyFV = cumulativeInflationFactor > 0 ? propertyFV / cumulativeInflationFactor : propertyFV;
+  const realAlternativeFV = cumulativeInflationFactor > 0 ? alternativeFV / cumulativeInflationFactor : alternativeFV;
+  const realNetDifference = realPropertyFV - realAlternativeFV;
+
+  // Real-term annualized ROI on equity invested (Fisher equation / exact CAGR adjustment)
+  let realROIProperty = 0;
+  let realROIAlternative = 0;
+  if (totalCapitalInvested > 0 && T > 0) {
+    const nominalCAGRProp = Math.pow(Math.max(0.001, propertyFV / totalCapitalInvested), 1 / T) - 1;
+    const nominalCAGRAlt = Math.pow(Math.max(0.001, alternativeFV / totalCapitalInvested), 1 / T) - 1;
+    realROIProperty = ((1 + nominalCAGRProp) / (1 + inflationDec) - 1) * 100;
+    realROIAlternative = ((1 + nominalCAGRAlt) / (1 + inflationDec) - 1) * 100;
+  }
+
   return {
     propertyPrice: P,
     downPayment,
@@ -97,6 +115,13 @@ export function calculateBaseModel(inputs: BaseInputs): BaseCalculationResult {
     requiredAppreciationPercent,
     equityMultipleProperty,
     equityMultipleAlternative,
+    inflationRate,
+    cumulativeInflationFactor,
+    realPropertyFV,
+    realAlternativeFV,
+    realNetDifference,
+    realROIProperty,
+    realROIAlternative,
   };
 }
 
@@ -196,6 +221,9 @@ export function calculateAdvancedModel(inputs: CombinedInputs): AdvancedCalculat
       // Alternative portfolio grows + net outflow added
       altPortfolio = altPortfolio * (1 + altAnnualRate) + propertyOutflow;
 
+      const inflationDec = (inputs.inflationRate ?? 5.0) / 100;
+      const deflator = Math.pow(1 + inflationDec, yr);
+
       schedule.push({
         year: yr,
         beginningLoanBalance: begLoan,
@@ -212,6 +240,9 @@ export function calculateAdvancedModel(inputs: CombinedInputs): AdvancedCalculat
         alternativeAnnualInvested: propertyOutflow,
         alternativePortfolioValue: altPortfolio,
         wealthGap: propEquity - altPortfolio,
+        inflationDeflator: deflator,
+        realPropertyEquity: propEquity / deflator,
+        realAlternativePortfolioValue: altPortfolio / deflator,
       });
     }
 
@@ -306,6 +337,9 @@ export function calculateAdvancedModel(inputs: CombinedInputs): AdvancedCalculat
     propertyCashFlows.push(-netOutflow);
     alternativeCashFlows.push(-netOutflow);
 
+    const inflationDec = (inputs.inflationRate ?? 5.0) / 100;
+    const deflator = Math.pow(1 + inflationDec, yr);
+
     schedule.push({
       year: yr,
       beginningLoanBalance: begLoan,
@@ -322,6 +356,9 @@ export function calculateAdvancedModel(inputs: CombinedInputs): AdvancedCalculat
       alternativeAnnualInvested: netOutflow,
       alternativePortfolioValue: altPortfolio,
       wealthGap: propEquity - altPortfolio,
+      inflationDeflator: deflator,
+      realPropertyEquity: propEquity / deflator,
+      realAlternativePortfolioValue: altPortfolio / deflator,
     });
   }
 
@@ -349,6 +386,17 @@ export function calculateAdvancedModel(inputs: CombinedInputs): AdvancedCalculat
   const ratioAdv = (netSaleProceedsAlternative + propertyLTCG) / P;
   const advRequiredApprec = (Math.pow(Math.max(0.1, ratioAdv), 1 / T) - 1) * 100;
 
+  // Real-term calculation for advanced results
+  const inflationRate = inputs.inflationRate ?? 5.0;
+  const cumulativeInflationFactor = Math.pow(1 + inflationRate / 100, T);
+  const realPropertyFV = finalPropertyValue / cumulativeInflationFactor;
+  const realAlternativeFV = altPortfolio / cumulativeInflationFactor;
+  const realNetDifference = (netSaleProceedsProperty - netSaleProceedsAlternative) / cumulativeInflationFactor;
+
+  // Real ROI on equity from IRR
+  const realROIProperty = ((1 + propertyIRR / 100) / (1 + inflationRate / 100) - 1) * 100;
+  const realROIAlternative = ((1 + alternativeIRR / 100) / (1 + inflationRate / 100) - 1) * 100;
+
   return {
     ...base,
     propertyFV: finalPropertyValue,
@@ -363,6 +411,13 @@ export function calculateAdvancedModel(inputs: CombinedInputs): AdvancedCalculat
     netSaleProceedsAlternative,
     propertyIRR,
     alternativeIRR,
+    inflationRate,
+    cumulativeInflationFactor,
+    realPropertyFV,
+    realAlternativeFV,
+    realNetDifference,
+    realROIProperty,
+    realROIAlternative,
     schedule,
   };
 }

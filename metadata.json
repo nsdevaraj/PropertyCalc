@@ -2,5 +2,5 @@
   "name": "Property vs Alternative Investment Simulator",
   "description": "Interactive financial model and sensitivity dashboard comparing leveraged rental property acquisition against disciplined alternative investment portfolios.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": []
 }

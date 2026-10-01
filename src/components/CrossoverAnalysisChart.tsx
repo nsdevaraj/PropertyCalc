@@ -33,6 +33,7 @@ interface CrossoverAnalysisChartProps {
   initialDownPayment: number;
   propertyAppreciation: number;
   alternativeReturn: number;
+  inflationRate?: number;
   onUpdateAppreciation?: (g: number) => void;
   onUpdateAltReturn?: (r: number) => void;
 }
@@ -55,10 +56,11 @@ export const CrossoverAnalysisChart: React.FC<CrossoverAnalysisChartProps> = ({
   initialDownPayment,
   propertyAppreciation,
   alternativeReturn,
+  inflationRate = 5.0,
   onUpdateAppreciation,
   onUpdateAltReturn,
 }) => {
-  const [viewType, setViewType] = useState<'growth' | 'delta'>('growth');
+  const [viewType, setViewType] = useState<'growth' | 'real' | 'delta'>('growth');
 
   // Build continuous data from Year 0 to Year T
   const fullData = useMemo(() => {
@@ -67,7 +69,9 @@ export const CrossoverAnalysisChart: React.FC<CrossoverAnalysisChartProps> = ({
         year: 0,
         label: 'Yr 0',
         propertyEquity: Math.round(initialDownPayment),
+        realPropertyEquity: Math.round(initialDownPayment),
         alternativePortfolio: Math.round(initialDownPayment),
+        realAlternativePortfolio: Math.round(initialDownPayment),
         netDelta: 0,
         leader: 'tied' as const,
       },
@@ -79,7 +83,9 @@ export const CrossoverAnalysisChart: React.FC<CrossoverAnalysisChartProps> = ({
           year: row.year,
           label: `Yr ${row.year}`,
           propertyEquity: pEquity,
+          realPropertyEquity: Math.round(row.realPropertyEquity),
           alternativePortfolio: aPort,
+          realAlternativePortfolio: Math.round(row.realAlternativePortfolioValue),
           netDelta: delta,
           leader: delta >= 0 ? ('property' as const) : ('alternative' as const),
         };
@@ -215,7 +221,17 @@ export const CrossoverAnalysisChart: React.FC<CrossoverAnalysisChartProps> = ({
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            Growth Curves
+            Nominal Growth
+          </button>
+          <button
+            onClick={() => setViewType('real')}
+            className={`rounded px-2.5 py-1 transition-colors ${
+              viewType === 'real'
+                ? 'bg-amber-500/20 text-amber-300 font-medium shadow-xs'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Real (Inflation-Adj)
           </button>
           <button
             onClick={() => setViewType('delta')}
@@ -338,7 +354,7 @@ export const CrossoverAnalysisChart: React.FC<CrossoverAnalysisChartProps> = ({
       {/* Chart Canvas */}
       <div className="h-[360px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          {viewType === 'growth' ? (
+          {viewType !== 'delta' ? (
             <ComposedChart data={fullData} margin={{ top: 15, right: 15, left: 10, bottom: 5 }}>
               <defs>
                 <linearGradient id="propArea" x1="0" y1="0" x2="0" y2="1">
@@ -370,7 +386,9 @@ export const CrossoverAnalysisChart: React.FC<CrossoverAnalysisChartProps> = ({
                 content={({ active, payload }) => {
                   if (!active || !payload || !payload.length) return null;
                   const d = payload[0].payload;
-                  const delta = d.propertyEquity - d.alternativePortfolio;
+                  const pVal = viewType === 'real' ? d.realPropertyEquity : d.propertyEquity;
+                  const aVal = viewType === 'real' ? d.realAlternativePortfolio : d.alternativePortfolio;
+                  const delta = pVal - aVal;
                   const isCurrentCrossoverYear =
                     crossover.hasCrossover && Math.abs(d.year - Math.round(crossover.exactYear)) === 0;
 
@@ -383,24 +401,29 @@ export const CrossoverAnalysisChart: React.FC<CrossoverAnalysisChartProps> = ({
                             ★ Crossover Zone
                           </span>
                         )}
+                        {viewType === 'real' && (
+                          <span className="text-[10px] text-amber-400 font-mono">
+                            Real Money
+                          </span>
+                        )}
                       </div>
                       <div className="space-y-1.5 font-mono">
                         <div className="flex items-center justify-between gap-5 text-emerald-400">
                           <span className="flex items-center gap-1.5 font-sans">
                             <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                            Property Net Equity:
+                            Property {viewType === 'real' ? 'Real' : 'Net'} Equity:
                           </span>
                           <span className="font-semibold tabular-nums">
-                            {formatCurrency(d.propertyEquity, currency, true)}
+                            {formatCurrency(pVal, currency, true)}
                           </span>
                         </div>
                         <div className="flex items-center justify-between gap-5 text-blue-400">
                           <span className="flex items-center gap-1.5 font-sans">
                             <span className="h-2 w-2 rounded-full bg-blue-400" />
-                            Alternative Portfolio:
+                            Alternative {viewType === 'real' ? 'Real' : ''} Portfolio:
                           </span>
                           <span className="font-semibold tabular-nums">
-                            {formatCurrency(d.alternativePortfolio, currency, true)}
+                            {formatCurrency(aVal, currency, true)}
                           </span>
                         </div>
                         <div className="pt-1.5 border-t border-slate-800 flex items-center justify-between gap-5 text-slate-300">
@@ -443,19 +466,19 @@ export const CrossoverAnalysisChart: React.FC<CrossoverAnalysisChartProps> = ({
               {/* Area & Lines */}
               <Area
                 type="monotone"
-                dataKey="propertyEquity"
+                dataKey={viewType === 'real' ? 'realPropertyEquity' : 'propertyEquity'}
                 stroke="#10b981"
                 strokeWidth={2.5}
                 fill="url(#propArea)"
-                name="Property Net Equity"
+                name={viewType === 'real' ? 'Property Real Equity' : 'Property Net Equity'}
               />
               <Area
                 type="monotone"
-                dataKey="alternativePortfolio"
+                dataKey={viewType === 'real' ? 'realAlternativePortfolio' : 'alternativePortfolio'}
                 stroke="#3b82f6"
                 strokeWidth={2.5}
                 fill="url(#altArea)"
-                name="Alternative Portfolio"
+                name={viewType === 'real' ? 'Alternative Real Portfolio' : 'Alternative Portfolio'}
               />
             </ComposedChart>
           ) : (

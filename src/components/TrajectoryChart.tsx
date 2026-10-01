@@ -26,7 +26,7 @@ export const TrajectoryChart: React.FC<TrajectoryChartProps> = ({
   tenureYears,
   initialDownPayment,
 }) => {
-  const [viewMode, setViewMode] = useState<'equity' | 'gross'>('equity');
+  const [viewMode, setViewMode] = useState<'equity' | 'real' | 'gross'>('equity');
 
   // Chart data with Year 0 starting point
   const chartData = [
@@ -34,16 +34,20 @@ export const TrajectoryChart: React.FC<TrajectoryChartProps> = ({
       year: 0,
       label: 'Yr 0',
       propertyEquity: initialDownPayment,
+      realPropertyEquity: initialDownPayment,
       propertyValue: schedule[0] ? schedule[0].propertyValue / (1 + 0.07) : initialDownPayment * 5,
       alternativePortfolio: initialDownPayment,
+      realAlternativePortfolio: initialDownPayment,
       loanBalance: schedule[0] ? schedule[0].beginningLoanBalance : 0,
     },
     ...schedule.map((row) => ({
       year: row.year,
       label: `Yr ${row.year}`,
       propertyEquity: Math.round(row.propertyEquity),
+      realPropertyEquity: Math.round(row.realPropertyEquity),
       propertyValue: Math.round(row.propertyValue),
       alternativePortfolio: Math.round(row.alternativePortfolioValue),
+      realAlternativePortfolio: Math.round(row.realAlternativePortfolioValue),
       loanBalance: Math.round(row.endingLoanBalance),
     })),
   ];
@@ -53,9 +57,14 @@ export const TrajectoryChart: React.FC<TrajectoryChartProps> = ({
   for (let i = 1; i < chartData.length; i++) {
     const prev = chartData[i - 1];
     const curr = chartData[i];
+    const prevProp = viewMode === 'real' ? prev.realPropertyEquity : prev.propertyEquity;
+    const prevAlt = viewMode === 'real' ? prev.realAlternativePortfolio : prev.alternativePortfolio;
+    const currProp = viewMode === 'real' ? curr.realPropertyEquity : curr.propertyEquity;
+    const currAlt = viewMode === 'real' ? curr.realAlternativePortfolio : curr.alternativePortfolio;
+
     if (
-      (prev.propertyEquity <= prev.alternativePortfolio && curr.propertyEquity > curr.alternativePortfolio) ||
-      (prev.propertyEquity >= prev.alternativePortfolio && curr.propertyEquity < curr.alternativePortfolio)
+      (prevProp <= prevAlt && currProp > currAlt) ||
+      (prevProp >= prevAlt && currProp < currAlt)
     ) {
       crossoverYear = curr.year;
       break;
@@ -63,8 +72,16 @@ export const TrajectoryChart: React.FC<TrajectoryChartProps> = ({
   }
 
   const finalRow = schedule[schedule.length - 1];
-  const finalPropEquity = finalRow ? finalRow.propertyEquity : 0;
-  const finalAltPortfolio = finalRow ? finalRow.alternativePortfolioValue : 0;
+  const finalPropEquity = finalRow
+    ? viewMode === 'real'
+      ? finalRow.realPropertyEquity
+      : finalRow.propertyEquity
+    : 0;
+  const finalAltPortfolio = finalRow
+    ? viewMode === 'real'
+      ? finalRow.realAlternativePortfolioValue
+      : finalRow.alternativePortfolioValue
+    : 0;
 
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
@@ -77,7 +94,9 @@ export const TrajectoryChart: React.FC<TrajectoryChartProps> = ({
             </h3>
           </div>
           <p className="mt-0.5 text-xs text-slate-400">
-            Comparing net liquid equity accumulation between the leveraged property and the disciplined alternative portfolio.
+            {viewMode === 'real'
+              ? 'Real-term wealth trajectory discounted for inflation (in today’s constant purchasing power).'
+              : 'Comparing net liquid equity accumulation between the leveraged property and the disciplined alternative portfolio.'}
           </p>
         </div>
 
@@ -91,7 +110,17 @@ export const TrajectoryChart: React.FC<TrajectoryChartProps> = ({
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            Net Equity (Assets − Debt)
+            Nominal Net Equity
+          </button>
+          <button
+            onClick={() => setViewMode('real')}
+            className={`rounded px-2.5 py-1 transition-colors ${
+              viewMode === 'real'
+                ? 'bg-amber-500/20 text-amber-300 font-medium shadow-xs'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Real (Inflation-Adj)
           </button>
           <button
             onClick={() => setViewMode('gross')}
@@ -149,29 +178,36 @@ export const TrajectoryChart: React.FC<TrajectoryChartProps> = ({
               content={({ active, payload }) => {
                 if (!active || !payload || !payload.length) return null;
                 const d = payload[0].payload;
-                const gap = d.propertyEquity - d.alternativePortfolio;
+                const pVal = viewMode === 'real' ? d.realPropertyEquity : d.propertyEquity;
+                const aVal = viewMode === 'real' ? d.realAlternativePortfolio : d.alternativePortfolio;
+                const gap = pVal - aVal;
                 return (
                   <div className="rounded-lg border border-slate-700 bg-slate-900/95 p-3 text-xs shadow-xl backdrop-blur-md">
-                    <div className="font-semibold text-white border-b border-slate-800 pb-1.5 mb-2">
-                      Year {d.year} Breakdown
+                    <div className="font-semibold text-white border-b border-slate-800 pb-1.5 mb-2 flex items-center justify-between gap-3">
+                      <span>Year {d.year} Breakdown</span>
+                      {viewMode === 'real' && (
+                        <span className="text-[10px] text-amber-400 font-mono">
+                          Real Purchasing Power
+                        </span>
+                      )}
                     </div>
                     <div className="space-y-1.5 font-mono">
                       <div className="flex items-center justify-between gap-4 text-emerald-400">
                         <span className="flex items-center gap-1.5">
                           <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                          Property Net Equity:
+                          Property {viewMode === 'real' ? 'Real' : 'Net'} Equity:
                         </span>
                         <span className="font-semibold tabular-nums">
-                          {formatCurrency(d.propertyEquity, currency, true)}
+                          {formatCurrency(pVal, currency, true)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between gap-4 text-blue-400">
                         <span className="flex items-center gap-1.5">
                           <span className="h-2 w-2 rounded-full bg-blue-400" />
-                          Alternative Portfolio:
+                          Alternative {viewMode === 'real' ? 'Real' : ''} Portfolio:
                         </span>
                         <span className="font-semibold tabular-nums">
-                          {formatCurrency(d.alternativePortfolio, currency, true)}
+                          {formatCurrency(aVal, currency, true)}
                         </span>
                       </div>
                       {viewMode === 'gross' && (
@@ -234,6 +270,25 @@ export const TrajectoryChart: React.FC<TrajectoryChartProps> = ({
                   strokeWidth={2.5}
                   fill="url(#altPortfolioGradient)"
                   name="Alternative Portfolio"
+                />
+              </>
+            ) : viewMode === 'real' ? (
+              <>
+                <Area
+                  type="monotone"
+                  dataKey="realPropertyEquity"
+                  stroke="#10b981"
+                  strokeWidth={2.5}
+                  fill="url(#propEquityGradient)"
+                  name="Property Real Equity"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="realAlternativePortfolio"
+                  stroke="#3b82f6"
+                  strokeWidth={2.5}
+                  fill="url(#altPortfolioGradient)"
+                  name="Alternative Real Portfolio"
                 />
               </>
             ) : (

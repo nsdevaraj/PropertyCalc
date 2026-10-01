@@ -8,6 +8,7 @@ export interface BaseInputs {
   monthlyRent: number; // R (e.g. 25,000)
   propertyAppreciation: number; // g (e.g. 7%)
   alternativeReturn: number; // r (e.g. 10%)
+  inflationRate: number; // π (e.g. 5.0% p.a.)
 }
 
 export interface AdvancedInputs {
@@ -45,6 +46,14 @@ export interface BaseCalculationResult {
   requiredAppreciationPercent: number; // g*
   equityMultipleProperty: number;
   equityMultipleAlternative: number;
+  // Real-term (inflation-adjusted) figures
+  inflationRate: number;
+  cumulativeInflationFactor: number; // (1 + π)^T
+  realPropertyFV: number; // propertyFV / (1 + π)^T
+  realAlternativeFV: number; // alternativeFV / (1 + π)^T
+  realNetDifference: number; // realPropertyFV - realAlternativeFV
+  realROIProperty: number; // annualized real ROI
+  realROIAlternative: number; // annualized real ROI
 }
 
 export interface YearlyScheduleRow {
@@ -63,6 +72,9 @@ export interface YearlyScheduleRow {
   alternativeAnnualInvested: number;
   alternativePortfolioValue: number;
   wealthGap: number; // propertyEquity - alternativePortfolioValue
+  inflationDeflator: number; // (1 + π)^year
+  realPropertyEquity: number; // propertyEquity / deflator
+  realAlternativePortfolioValue: number; // alternativePortfolioValue / deflator
 }
 
 export interface AdvancedCalculationResult extends BaseCalculationResult {

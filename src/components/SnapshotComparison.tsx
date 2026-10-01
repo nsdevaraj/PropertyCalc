@@ -311,6 +311,31 @@ export const SnapshotComparison: React.FC<SnapshotComparisonProps> = ({
                   </td>
                 </tr>
 
+                {/* 5b. Inflation Rate */}
+                <tr className="hover:bg-slate-800/20 bg-amber-950/10">
+                  <td className="py-1.5 px-3 font-sans font-medium text-amber-300">
+                    Inflation Rate (π)
+                  </td>
+                  <td className="py-1.5 px-3 text-right text-slate-400 tabular-nums">
+                    {(baseInputs.inflationRate ?? 5.0).toFixed(1)}%
+                  </td>
+                  <td className="py-1.5 px-3 text-right font-semibold text-amber-400 tabular-nums">
+                    {(currentInputs.inflationRate ?? 5.0).toFixed(1)}%
+                  </td>
+                  {activeSnapshot && (
+                    <td className="py-1.5 px-3 text-right text-amber-200 tabular-nums">
+                      {(activeSnapshot.inputs.inflationRate ?? 5.0).toFixed(1)}%
+                    </td>
+                  )}
+                  <td className="py-1.5 px-3 text-right tabular-nums text-slate-400">
+                    {(currentInputs.inflationRate ?? 5.0) - (baseInputs.inflationRate ?? 5.0) === 0
+                      ? '—'
+                      : `${(currentInputs.inflationRate ?? 5.0) > (baseInputs.inflationRate ?? 5.0) ? '+' : ''}${(
+                          (currentInputs.inflationRate ?? 5.0) - (baseInputs.inflationRate ?? 5.0)
+                        ).toFixed(1)}%`}
+                  </td>
+                </tr>
+
                 {/* 6. Monthly EMI */}
                 <tr className="hover:bg-slate-800/20">
                   <td className="py-1.5 px-3 font-sans font-medium text-slate-300">
@@ -419,7 +444,7 @@ export const SnapshotComparison: React.FC<SnapshotComparisonProps> = ({
                 {/* 10. Final Property FV */}
                 <tr className="hover:bg-slate-800/20">
                   <td className="py-1.5 px-3 font-sans font-medium text-slate-300">
-                    Property Future Value
+                    Property Future Value (Nominal)
                   </td>
                   <td className="py-1.5 px-3 text-right text-slate-400 tabular-nums">
                     {formatCurrency(baseResults.propertyFV, currency, true)}
@@ -440,6 +465,67 @@ export const SnapshotComparison: React.FC<SnapshotComparisonProps> = ({
                           currency,
                           true
                         )}`}
+                  </td>
+                </tr>
+
+                {/* 10b. Real-Term Returns (Inflation-Adjusted Purchasing Power) */}
+                <tr className="hover:bg-slate-800/20 bg-emerald-950/10">
+                  <td className="py-1.5 px-3 font-sans font-medium text-emerald-400">
+                    Real Property FV (Today's Money)
+                  </td>
+                  <td className="py-1.5 px-3 text-right text-slate-400 tabular-nums">
+                    {formatCurrency(baseResults.realPropertyFV, currency, true)}
+                  </td>
+                  <td className="py-1.5 px-3 text-right font-semibold text-emerald-400 tabular-nums">
+                    {formatCurrency(currentResults.realPropertyFV, currency, true)}
+                  </td>
+                  {activeSnapshot && (
+                    <td className="py-1.5 px-3 text-right text-amber-200 tabular-nums">
+                      {formatCurrency(activeSnapshot.results.realPropertyFV, currency, true)}
+                    </td>
+                  )}
+                  <td className="py-1.5 px-3 text-right tabular-nums text-slate-400">
+                    {formatCurrency(currentResults.realPropertyFV - baseResults.realPropertyFV, currency, true)}
+                  </td>
+                </tr>
+
+                <tr className="hover:bg-slate-800/20 bg-blue-950/10">
+                  <td className="py-1.5 px-3 font-sans font-medium text-blue-400">
+                    Real Alternative FV (Today's Money)
+                  </td>
+                  <td className="py-1.5 px-3 text-right text-slate-400 tabular-nums">
+                    {formatCurrency(baseResults.realAlternativeFV, currency, true)}
+                  </td>
+                  <td className="py-1.5 px-3 text-right font-semibold text-blue-400 tabular-nums">
+                    {formatCurrency(currentResults.realAlternativeFV, currency, true)}
+                  </td>
+                  {activeSnapshot && (
+                    <td className="py-1.5 px-3 text-right text-amber-200 tabular-nums">
+                      {formatCurrency(activeSnapshot.results.realAlternativeFV, currency, true)}
+                    </td>
+                  )}
+                  <td className="py-1.5 px-3 text-right tabular-nums text-slate-400">
+                    {formatCurrency(currentResults.realAlternativeFV - baseResults.realAlternativeFV, currency, true)}
+                  </td>
+                </tr>
+
+                <tr className="hover:bg-slate-800/20">
+                  <td className="py-1.5 px-3 font-sans font-medium text-slate-300">
+                    Real Annualized ROI (Prop vs Alt)
+                  </td>
+                  <td className="py-1.5 px-3 text-right text-slate-400 tabular-nums">
+                    {formatPercent(baseResults.realROIProperty, 1)} / {formatPercent(baseResults.realROIAlternative, 1)}
+                  </td>
+                  <td className="py-1.5 px-3 text-right font-semibold text-white tabular-nums">
+                    {formatPercent(currentResults.realROIProperty, 1)} / {formatPercent(currentResults.realROIAlternative, 1)}
+                  </td>
+                  {activeSnapshot && (
+                    <td className="py-1.5 px-3 text-right text-amber-200 tabular-nums">
+                      {formatPercent(activeSnapshot.results.realROIProperty, 1)} / {formatPercent(activeSnapshot.results.realROIAlternative, 1)}
+                    </td>
+                  )}
+                  <td className="py-1.5 px-3 text-right tabular-nums text-emerald-400">
+                    {(currentResults.realROIProperty - currentResults.realROIAlternative).toFixed(1)}% spread
                   </td>
                 </tr>
 
